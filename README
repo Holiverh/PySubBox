@@ -19,6 +19,9 @@ USAGE:
 
 	python subbox.py (update|search|(download|play videoID, ...)) [options]
 	
+		--index-dir can be used to specify which local index to use.
+		Defaults to ~/Videos/Subscriptions
+	
 		update
 		
 			Fetches the specified user's subscription feed and updates
@@ -28,7 +31,7 @@ USAGE:
 			to be set.
 			
 			--limit determines the number of videos to fetch from each
-			channel feed.
+			channel feed. Defaults to 0.
 			
 			An optional --start-index can also be set to an integer
 			value which will indicate which video to start from. 1, the
