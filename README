@@ -1,0 +1,91 @@
+
+PySubBox is a utility --more specifically, a Python script-- for
+searching, downloading and watching your YouTube subscriptions without 
+visiting YouTube it self.
+
+DEPENDANCIES:
+	
+	* python (tested only under 2.6)
+	* python-gdata
+	* clive 			- for downloading videos from youtube
+	* mplayer 			- for video playback
+
+TERMINOLOGY:	
+
+	"local index" - a directory contianing various sub-directories used
+					for containing "media" and "meta" files.
+
+USAGE:
+
+	python subbox.py (update|search|(download|play videoID, ...)) [options]
+	
+		update
+		
+			Fetches the specified user's subscription feed and updates
+			a local index with newly uploaded videos.
+			
+			Requires -u|--username , -p|--password and --limit options
+			to be set.
+			
+			--limit determines the number of videos to fetch from each
+			channel feed.
+			
+			An optional --start-index can also be set to an integer
+			value which will indicate which video to start from. 1, the
+			default, is the most recently uploaded. Useful if you want
+			to backdate your index; just set an arbiturary largish 
+			number.
+			
+		search
+		
+			Searches the local index against a given query. The video
+			title, category and tags are all taken into account. Returns
+			a serious of lines in the format
+			
+				" - VIDEO_ID [*] VIDEO_TITLE"
+				
+			indicating those that matched the query. The conditional
+			asterick signifies whether there is a media file associated
+			with the video entry. i.e. whether it's been downloaded yet.
+			
+			Requires -q|--query to be set. Set to "" to list entire
+			index.
+			
+			The search can be customised by setting the --limit and/or
+			--threshold options.
+			
+				--limit truncates the number of results returned to the
+				value provided. e.g. --limit=5 shows only the best five
+				results.
+				
+				--threshold sets the 'strictness' of the search relative
+				to the 'best match' result. As in, the higher the value,
+				theoretically, the less results that match the query.
+				
+				Should be a value in the range 0 to 1.
+				
+		download
+		
+			Downloads the actual video file from YouTube via clive[1].
+			
+			An optional --resolution option can be set to a string in 
+			the format "width x height" (No spaces or quotation marks.)
+			which is transformed into a clive "format" argument. If
+			there is no exact match between the given resolution and
+			a valid clive format argument, a best match will be used.
+			Clive format arguments may be given instead of a resolution.
+			
+			If multiple video IDs are specified, they'll be downloaded
+			concurrently.
+			
+		play
+		
+			Plays back a video file via mplayer[2].
+			
+			If multiple video IDs are specified, they'll be played
+			sequencially.
+		
+LINKS:
+
+	[1] http://clive.sourceforge.com/
+	[2] http://www.mplayerhq.hu/design7/news.html
