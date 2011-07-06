@@ -1,5 +1,5 @@
 
-# Copyright (C) 2011 by Oliver Aintsworth
+# Copyright (C) 2011 by Oliver Ainsworth
 
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -115,7 +115,21 @@ class VideoIndex(object):
 	# directory to be syncronised. Saves having to do a complete resync
 	# everytime one video is added.
 	def sync(self):
-			
+		
+		# Profiles of sync appear to show some low-level caching going on
+		# which is causing the performance of posix.stat and file.read
+		# to fluxuate depending on whether they were recently invoked.
+		# This *may* also affect posix.listdir, but the time spent in 
+		# listdir is neglible anyway.
+		
+		# Taken from a profile that compelted in 9.917s (742 enteries):
+		# 740    1.759    0.002    1.759    0.002 {method 'read' of 'file' objects}
+		# 1484    6.308    0.004    6.308    0.004 {posix.stat}
+		
+		# ... and from one completed in 2.087:
+		# 740    0.099    0.000    0.099    0.000 {method 'read' of 'file' objects}
+		# 1484    0.064    0.000    0.064    0.000 {posix.stat}
+
 		print "Syncronising video index ...",
 		
 		for vid in os.listdir(self.directory):

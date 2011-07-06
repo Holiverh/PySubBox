@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-# Copyright (C) 2011 by Oliver Aintsworth
+# Copyright (C) 2011 by Oliver Ainsworth
 
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -38,10 +38,9 @@ def login(user=None, password=None):
 		exit()
 	
 	print "Logging in ...",
-	client = gdata.youtube.service.YouTubeService(options.username,
-													options.password)
+	client = gdata.youtube.service.YouTubeService(user, password)
 	try:
-		client.ClientLogin(options.username, options.password)
+		client.ClientLogin(user, password)
 		print "Okay!"
 		return client
 	except gdata.service.BadAuthentication:
@@ -69,13 +68,13 @@ if __name__ == '__main__':
 	option_parser.add_option("--start-index", action="store", type="int", dest="start_index", default=1, help="when updating, where should the feed index start from; greater = older videos")
 	option_parser.add_option("-r", "--resolution", action="store", type="string", dest="resolution", default="best", help="when downloading, determines the format to be requested, based on closest matched resolution; clive presets also accepted")
 	
-	action = sys.argv[1].lower()
+	try:
+		action = sys.argv[1].lower()
+	except IndexError:
+		option_parser.print_usage()
+		exit()
+		
 	options, args = option_parser.parse_args(sys.argv[1:])
-	
-	valid_actions = ["update", "search", "download", "play"]
-	if action not in valid_actions:
-		print "Error: Expected '{0}' as first argument, got '{1}'.".format(
-										"', '".join(valid_actions), action)
 	
 	videx = VideoIndex(options.index_dir)
 	
@@ -238,5 +237,9 @@ if __name__ == '__main__':
 				print "Error: {0} not in index!".format(vid)
 		except IndexError:
 			print "Error: You need to provide a video ID to play."
+		
+	else:
+
+		option_parser.print_usage()
 		
 		
