@@ -22,14 +22,14 @@
 
 import sys
 import os
-import os.path
 import optparse
+import json
 from time import sleep
-
-from video_index import VideoIndex
 
 import gdata.youtube.service
 import gdata.youtube
+
+from video_index import VideoIndex
 
 def login(user=None, password=None):
 	
@@ -47,6 +47,48 @@ def login(user=None, password=None):
 		print "Error: Incorrect username or password!"
 		exit()
 
+CONFIG_DIR_PATH = os.path.join(
+					os.getenv("XDG_CONFIG_HOME", os.path.join(os.path.expanduser("~"), ".config"))
+					, "pysubbox")
+CONFIG_FILE_PATH = os.path.join(CONFIG_DIR_PATH, "config.json")
+
+DEFAULT_CONFIG = {
+				"username": "",
+							
+				"cmd": {
+						"play": "",
+						"download": ""
+						},
+						
+				"resolution": "best",
+				
+				"search_limit": 15, # 0 = all
+				"feed_limit": 25, # 0 - 50
+				
+				"threshold": 0.33, # 0 - 1
+				
+				"index_dir": os.path.join(os.path.expanduser("~"),
+											"Videos", "Subscriptions"),
+											
+											
+				}
+
+if not os.path.isfile(CONFIG_FILE_PATH):
+	print "Configuration file missing! Creating it '{0}' ...".format(CONFIG_FILE_PATH)
+	
+	if not os.path.isdir(CONFIG_DIR_PATH):
+		os.mkdir(CONFIG_DIR_PATH)
+		
+	with open(CONFIG_FILE_PATH, "w") as config_file:
+		json.dump(DEFAULT_CONFIG, config_file, sort_keys=True, indent=4)
+
+with open(CONFIG_FILE_PATH, "r") as config_file:
+	
+	config = json.load(config_file)
+	for key in DEFAULT_CONFIG:
+		if key not in config:
+			config[key] = DEFAULT_CONFIG[key]
+
 if __name__ == '__main__':
 	
 	# Dependancies:
@@ -55,18 +97,16 @@ if __name__ == '__main__':
 	#	clive
 	#	mplayer
 	
-	# TODO: Have a global config file which may contain a defaults for
-	# the CL arguments. Saves having to enter them over and over again.
-	
 	option_parser = optparse.OptionParser(usage="python %prog (update|search|(download|play videoID, ...)) [options]")
-	option_parser.add_option("-u", "--username", action="store", type="string", dest="username", help="username/email you use to log into YouTube")
+	option_parser.add_option("-u", "--username", action="store", type="string", dest="username", default=config["username"], help="username/email you use to log into YouTube")
 	option_parser.add_option("-p", "--password", action="store", type="string", dest="password", help="password you use to log into YouTube")
 	option_parser.add_option("-q", "--query", action="store", type="string", dest="search_query", help="query used to search the video index")
-	option_parser.add_option("--limit", action="store", type="int", dest="limit", default=0, help="if 'search', truncates the number of results, if 'update' limits the number of videos to fetch from the feed")
-	option_parser.add_option("--threshold", action="store", type="float", dest="threshold", default=0.25, help="set the threshold, as a fraction in the range 0 <= x <= 1, for search results; higher = only the very best matches are printed")
-	option_parser.add_option("--index-dir", action="store", type="string", dest="index_dir", default=os.path.join(os.path.expanduser("~"), "Videos", "Subscriptions"), help="the path to the directory which should be indexed; defaults to ~/Videos/YouTube")
+	option_parser.add_option("--limit", action="store", type="int", dest="limit", default=-1, help="if 'search', truncates the number of results, if 'update' limits the number of videos to fetch from the feed")
+	option_parser.add_option("--threshold", action="store", type="float", dest="threshold", default=config["threshold"], help="set the threshold, as a fraction in the range 0 <= x <= 1, for search results; higher = only the very best matches are printed")
+	option_parser.add_option("--index-dir", action="store", type="string", dest="index_dir", default=config["index_dir"], help="the path to the directory which should be indexed; defaults to ~/Videos/YouTube")
 	option_parser.add_option("--start-index", action="store", type="int", dest="start_index", default=1, help="when updating, where should the feed index start from; greater = older videos")
-	option_parser.add_option("-r", "--resolution", action="store", type="string", dest="resolution", default="best", help="when downloading, determines the format to be requested, based on closest matched resolution; clive presets also accepted")
+	option_parser.add_option("-r", "--resolution", action="store", type="string", dest="resolution", default=config["resolution"], help="when downloading, determines the format to be requested, based on closest matched resolution; clive presets also accepted")
+	#option_parser.add_option("-c", "--cmd", action="store", type="string", dest="cmd", default=None, help="command to be used when downloading/playing media, see the README for details")
 	
 	try:
 		action = sys.argv[1].lower()
@@ -75,6 +115,13 @@ if __name__ == '__main__':
 		exit()
 		
 	options, args = option_parser.parse_args(sys.argv[1:])
+	
+	if options.limit == -1:
+		
+		if action == "search":
+			options.limit = config["search_limit"]
+		elif action == "update":
+			options.limit = config["feed_limit"]
 	
 	videx = VideoIndex(options.index_dir)
 	
