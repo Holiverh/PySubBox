@@ -7,8 +7,14 @@ DEPENDANCIES:
 	
 	* python (tested only under 2.6)
 	* python-gdata
-	* clive 			- for downloading videos from youtube
+	* clive[1] 			- for downloading videos from youtube
+
+RECCOMENDATIONS:
+
 	* mplayer 			- for video playback
+	
+	MPlayer[2] are no longer 'required' for using PySubBox. However they
+	will be used by default.
 
 TERMINOLOGY:	
 
@@ -31,7 +37,7 @@ USAGE:
 			to be set.
 			
 			--limit determines the number of videos to fetch from each
-			channel feed. Defaults to 0.
+			channel feed. Defaults to 25.
 			
 			An optional --start-index can also be set to an integer
 			value which will indicate which video to start from. 1, the
@@ -59,7 +65,7 @@ USAGE:
 			
 				--limit truncates the number of results returned to the
 				value provided. e.g. --limit=5 shows only the best five
-				results.
+				results. Defaults to 15.
 				
 				--threshold sets the 'strictness' of the search relative
 				to the 'best match' result. As in, the higher the value,
@@ -69,7 +75,7 @@ USAGE:
 				
 		download
 		
-			Downloads the actual video file from YouTube via clive[1].
+			Downloads the actual video file from YouTube.
 			
 			An optional --resolution option can be set to a string in 
 			the format "width x height" (No spaces or quotation marks.)
@@ -83,12 +89,82 @@ USAGE:
 			
 		play
 		
-			Plays back a video file via mplayer[2].
+			Plays back a video file.
 			
 			If multiple video IDs are specified, they'll be played
 			sequencially.
+
+FILES:
+
+	~/.config/pysubbox/config.json
+	
+		A JSON files specifying various configuration options.
 		
+		Name			Type	Description
+		----------------------------------------------------------------
+		username		String 	The username you use to login to YouTube. Is
+								overiden by -u and --username. No default.
+							
+		cmd >
+		  download		String 	The command used to download the media file.
+								Overiden by -c and --cmd. Default:
+							
+									clive -f {format} --output-file='{media_file}' {uri}
+							
+		  play			String	The command used to play the media file.
+								Overiden by -c and --cmd. Default:
+							
+									mplayer {media_file}
+		
+			These commands make use of Python, PEP 3101 string formatting
+			to insert metadata about the video. For a comprehensive
+			guide to using string formatting, consult the appropriate
+			Python documentation.
+				
+				String			Substitued with ...
+				--------------------------------------------------------
+				{media_file}	The absolute path to the media file
+								associated with the video entry.
+								
+				{directory}		The absolute path to the directory
+								containing the media and meta files.
+								
+				{title}
+				
+				{description}
+				
+				{category}
+				
+				{uri}			The URI to the watch page of the video.
+				
+				{id}			The video ID of the video.
+				
+				{format}		See the FORMAT section of the clive manual.
+		
+		resolution		String	Supplies the {format} argument when executing
+								the download or play commands. Overiden
+								by -r and --resolution. Default: best
+							
+		search_limit	Int		The maximum number of results to return
+								when seraching the video index. If 0,
+								all matching results will be displayed.
+								Overiden by --limit. Default: 15
+								
+		feed_limit		Int		The number of video enteries to fetch
+								from each feed request. Should be in the
+								range 0 to 50. Overiden by --limit.
+								Default: 25.
+								
+		threshold		Float	When searching the video index, specifies
+								the 'strictness' of the search. Overiden:
+								by --threshold. Default: 0.33
+								
+		index_dir		String	The path to the root of the video index.
+								Overiden by --index_dir. Default:
+								
+									~/Videos/Subscriptions
+	
 LINKS:
 
 	[1] http://clive.sourceforge.com/
-	[2] http://www.mplayerhq.hu/design7/news.html
+	[2] http://www.mplayerhq.hu/
