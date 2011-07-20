@@ -30,6 +30,7 @@ class VideoIndexEntry(object):
 	def __init__(self, directory, meta):
 		
 		self.directory = directory
+		self.media_file = os.path.join(self.directory, "media")
 		
 		# IMPORTANT NOTE: changing anyone of these attributes does NOT
 		# change the meta JSON file. Possible TODO.
@@ -52,20 +53,17 @@ class VideoIndexEntry(object):
 			
 	has_media = property(_has_media)
 	
-	def fetch_media(self, fmt):
-
-		exec_ = "clive -f {2} --output-file='{0}' {1}".format(
-					os.path.join(self.directory, "media"),
-					self.uri,
-					fmt)
-		subprocess.Popen(exec_, shell=True,).wait()
-
-	def play(self):
-		
-		exec_ = "mplayer {0}".format(
-					os.path.join(self.directory, "media"),
-					)
-		subprocess.Popen(exec_, shell=True,).wait()
+	def execute_command(self, cmd, **kwargs):
+		"""
+			Executes `cmd` as a child process. Uses Python 2.6/PEP 3101
+			string formatting, passing all attributes of `self` and 
+			`kwargs` as arguments to the str.vformat() call.
+			
+			If there are any intersections between `self.__dict__` and
+			`kwargs`, `kwargs`'s value take presedence.
+		"""
+		subprocess.Popen(str(cmd).format(
+							**dict(self.__dict__, **kwargs)), shell=True)
 			
 class VideoIndex(object):
 	

@@ -56,8 +56,8 @@ DEFAULT_CONFIG = {
 				"username": "",
 							
 				"cmd": {
-						"play": "",
-						"download": ""
+						"play": "mplayer {media_file}",
+						"download": "clive -f {format} --output-file='{media_file}' {uri}",
 						},
 						
 				"resolution": "best",
@@ -68,9 +68,7 @@ DEFAULT_CONFIG = {
 				"threshold": 0.33, # 0 - 1
 				
 				"index_dir": os.path.join(os.path.expanduser("~"),
-											"Videos", "Subscriptions"),
-											
-											
+											"Videos", "Subscriptions"),	
 				}
 
 if not os.path.isfile(CONFIG_FILE_PATH):
@@ -106,7 +104,7 @@ if __name__ == '__main__':
 	option_parser.add_option("--index-dir", action="store", type="string", dest="index_dir", default=config["index_dir"], help="the path to the directory which should be indexed; defaults to ~/Videos/YouTube")
 	option_parser.add_option("--start-index", action="store", type="int", dest="start_index", default=1, help="when updating, where should the feed index start from; greater = older videos")
 	option_parser.add_option("-r", "--resolution", action="store", type="string", dest="resolution", default=config["resolution"], help="when downloading, determines the format to be requested, based on closest matched resolution; clive presets also accepted")
-	#option_parser.add_option("-c", "--cmd", action="store", type="string", dest="cmd", default=None, help="command to be used when downloading/playing media, see the README for details")
+	option_parser.add_option("-c", "--cmd", action="store", type="string", dest="cmd", default=None, help="command to be used when downloading/playing media, see the README for details")
 	
 	try:
 		action = sys.argv[1].lower()
@@ -219,6 +217,9 @@ if __name__ == '__main__':
 			
 	elif action == "download":
 		
+		if not options.cmd:
+			options.cmd = DEFAULT_CONFIG["cmd"]["download"]
+		
 		res_fmt_map = {
 					(176, 144): "fmt17",
 					(320, 180): "fmt34",
@@ -262,29 +263,32 @@ if __name__ == '__main__':
 			for video in videx.search(options.search_query,
 										options.sr_threshold,
 										options.sr_limit):
-				video.fetch_media(options.resolution)
+				video.execute_command(options.cmd, format=fmt)
 				
 		else:
 			
 			for vid in args[1:]:
 				try:
-					videx[vid].fetch_media(fmt)
+					videx[vid].execute_command(options.cmd, format=fmt)
 				except KeyError:
 					print "Error: {0} not in index!".format(vid)
 					
 	elif action == "play":
+		
+		if not options.cmd:
+			options.cmd = DEFAULT_CONFIG["cmd"]["play"]
 		
 		videx.sync()
 		
 		try:
 			try:
 				for vid in args[1:]:
-					videx[vid].play()
+					videx[vid].execute_command(options.cmd)
 			except KeyError:
 				print "Error: {0} not in index!".format(vid)
 		except IndexError:
 			print "Error: You need to provide a video ID to play."
-		
+	
 	else:
 
 		option_parser.print_usage()
