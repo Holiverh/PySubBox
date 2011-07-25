@@ -90,7 +90,7 @@ with open(CONFIG_FILE_PATH, "r") as config_file:
 
 if __name__ == '__main__':
 	
-	option_parser = optparse.OptionParser(usage="python %prog (update|search|(download|play videoID, ...)) [options]")
+	option_parser = optparse.OptionParser(usage="python %prog (update|search|(download|play|repair videoID, ...)) [options]")
 	option_parser.add_option("-u", "--username", action="store", type="string", dest="username", default=config["username"], help="username/email you use to log into YouTube")
 	option_parser.add_option("-p", "--password", action="store", type="string", dest="password", help="password you use to log into YouTube")
 	option_parser.add_option("-q", "--query", action="store", type="string", dest="search_query", help="query used to search the video index")
@@ -154,25 +154,8 @@ if __name__ == '__main__':
 					feed = client.GetYouTubeVideoFeed(uri)
 					print "Feed: {0}".format(link.href)
 					
-					for entry in feed.entry:
-				
-						meta = {}
-						
-						for category in entry.category:
-							if category.label:
-								meta["category"] = category.label
-
-						# I found no garantuee in the docs that the end of the
-						# "ID" URI won't have other parameters tacked on. Will
-						# assume it's safe though.
-						meta["id"] = entry.id.text.split("/")[-1]
-						meta["uri"] = entry.media.player.url
-						meta["description"] = entry.media.description.text
-						meta["title"] = entry.media.title.text
-						meta["tags"] = [tag.strip() for tag in 
-									entry.media.keywords.text.split(",")]
-						
-						videx.add(meta)
+					for entry in feed.entry:		
+						videx.add(client.GetVideoMeta(entry=entry))
 					
 				except gdata.service.RequestError as exce:
 					# FIXME: The failed request is caused by being too
@@ -187,8 +170,12 @@ if __name__ == '__main__':
 							# Going to handle it as a regular unexpected
 							# response, instead of a special case. At 
 							# least until more is known.
+							
+						# The RequestError is raised when accessing the
+						# video's 'meta' data via YouTubeClient.GetVideoMeta.
+						# So it's per-video request, not per-feed it appears.
 					print "Error: Unexpected response to feed request!" \
-													"{0}".format(exce)
+													" {0}".format(exce)
 				
 				
 	elif action == "search":
@@ -283,7 +270,21 @@ if __name__ == '__main__':
 				print "Error: {0} not in index!".format(vid)
 		except IndexError:
 			print "Error: You need to provide a video ID to play."
-	
+			
+	elif action == "repair":
+		
+		client = login(options.username, options.password)
+		
+		for vid in args[1:]:
+			
+			print "Attempting to repair {0}".format(vid)
+			
+			try:
+				videx.add(client.GetVideoMeta(vid=vid))
+			except gdata.service.RequestError as exce:
+				print "Error: Unexpected response to request!" \
+													" {0}".format(exce)
+			
 	else:
 
 		option_parser.print_usage()

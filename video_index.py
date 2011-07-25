@@ -20,26 +20,70 @@
 # THE SOFTWARE.
 
 import os
-import os.path
 import json
 import subprocess
 from time import sleep
 
 class VideoIndexEntry(object):
 	
+	# keys_map maps the key used in the meta dictionary to the name of
+	# the attribute it bound do upon initialisation. The key is the 
+	# name used in the meta file, the associated value is the attribute name.
+	keys_map = {
+				"title": "title",
+				"description": "description",
+				"category": "category",
+				"tags": "tags",
+				"uri": "uri",
+				"id": "id",
+				"date_published": "date_published",
+				}
+	
 	def __init__(self, directory, meta):
 		
-		self.directory = directory
+		self.directory = str(directory)
 		self.media_file = os.path.join(self.directory, "media")
+		self.meta_file = os.path.join(self.directory, "meta")
 		
-		# IMPORTANT NOTE: changing anyone of these attributes does NOT
-		# change the meta JSON file. Possible TODO.
-		self.title = meta.get("title", "")
-		self.description = meta.get("description", "")
-		self.category = meta.get("category", "")
-		self.tags = meta.get("tags", [])
-		self.uri = meta["uri"]
-		self.id = meta["id"]
+		# Changing anyone of these attributes does NOT change the meta
+		# JSON file; must call write_meta_file().
+		self.date_published = float(meta.get("date_published", 0.0))
+		self.title = str(meta.get("title", ""))
+		self.description = str(meta.get("description", ""))
+		self.category = str(meta.get("category", ""))
+		self.tags = list(meta.get("tags", []))
+		self.uri = str(meta["uri"])
+		self.id = str(meta["id"])
+	
+	def execute_command(self, cmd, **kwargs):
+		"""
+			Executes `cmd` as a child process. Uses Python 2.6/PEP 3101
+			string formatting, passing all attributes of `self` and 
+			`kwargs` as arguments to the str.format() call.
+			
+			If there are any intersections between `self.__dict__` and
+			`kwargs`, `kwargs`'s value take presedence.
+		"""
+		subprocess.Popen(str(cmd).format(
+							**dict(self.__dict__, **kwargs)), shell=True)
+	
+	def write_meta_file(self):
+		
+		with open(self.meta_file, "w") as meta_file:
+			json.dump(self.meta, meta_file, indent=4)
+						
+	def _get_meta_dict(self):
+		
+		meta_dict = {}
+		
+		for key, attr_name in self.__class__.keys_map.iteritems():
+			try:
+				meta_dict[key] = self.__getattribute__(attr_name)
+			except AttributeError:
+				raise AttributeError(
+					"can't build meta dict; '{0}' attribute missing".format(attr_name))
+					
+		return meta_dict
 	
 	def _has_media(self):
 		
@@ -52,19 +96,8 @@ class VideoIndexEntry(object):
 		return False
 			
 	has_media = property(_has_media)
+	meta = property(_get_meta_dict)
 	
-	def execute_command(self, cmd, **kwargs):
-		"""
-			Executes `cmd` as a child process. Uses Python 2.6/PEP 3101
-			string formatting, passing all attributes of `self` and 
-			`kwargs` as arguments to the str.vformat() call.
-			
-			If there are any intersections between `self.__dict__` and
-			`kwargs`, `kwargs`'s value take presedence.
-		"""
-		subprocess.Popen(str(cmd).format(
-							**dict(self.__dict__, **kwargs)), shell=True)
-			
 class VideoIndex(object):
 	
 	# TODO: Implement some kind of caching for the video index. Often
@@ -79,7 +112,7 @@ class VideoIndex(object):
 			
 				`directory` - the path to the directory which should be
 							indexed. If does not exist, will attempt
-							to crate.
+							to create.
 		"""
 		
 		self.videos = {}
@@ -97,17 +130,29 @@ class VideoIndex(object):
 	
 	def __iter__(self):
 		return self.videos.iteritems()
+		
+	def __contains__(self, obj):
+		return self.videos.__contains__(obj)
 	
 	def add(self, meta):
-		"""
-			Creates a directory to house a new video, as defined by `meta`.
-			Does *NOT* not create an entry in `videos`, you must sync.
+		"""		
+			Creates a VideoIndexEntry from `meta` and a directory to
+			house it if one doesn't already exist. If it does, the meta
+			file will be overwritten, and the media file, if it exists,
+			deleted.
+			
+			The entry is added to the index. If the entry ID is already
+			in the index, it's overidden.
 		"""
 		
 		dir_name = os.path.join(self.directory, meta["id"])
 		if not os.path.exists(dir_name):
 			os.mkdir(dir_name)
-			json.dump(meta, open(os.path.join(dir_name, "meta"), "w"), indent=4)
+
+		entry = VideoIndexEntry(dir_name, meta)
+		entry.write_meta_file()
+		
+		self.videos[entry.id] = entry			
 	
 	# TODO: allow sync() to take an argument which specifies a specific
 	# directory to be syncronised. Saves having to do a complete resync
@@ -128,7 +173,7 @@ class VideoIndex(object):
 		# 740    0.099    0.000    0.099    0.000 {method 'read' of 'file' objects}
 		# 1484    0.064    0.000    0.064    0.000 {posix.stat}
 
-		print "Syncronising video index ...",
+		print "Syncronising video index ..."
 		
 		for vid in os.listdir(self.directory):
 			
@@ -141,15 +186,15 @@ class VideoIndex(object):
 										os.path.join(self.directory, vid),
 												json.loads(file_.read()))
 							self.videos[entry.id] = entry
+					else:
+						print "Error: Missing meta file for {0}".format(vid)
 							
-			except ValueError as e:
-				print "Error: Corrupted entry for '{0}'!".format(vid)
-				
-		print "Done!"
+			except ValueError:
+				print "Error: Corrupted entry for {0}".format(vid)
 	
 	def search(self, query, threshold=0.25, limit=None):
 		"""
-			... Returns a generator. 
+			... Returns a generator.
 		
 				`query` - a string of search terms. May include special
 							directives in the form 'key:value'.

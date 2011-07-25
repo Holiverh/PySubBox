@@ -39,7 +39,7 @@ class YouTubeClient(gdata.youtube.service.YouTubeService):
 		
 		return client
 	
-	def GetVideoMeta(self, uri=None, vid=None):
+	def GetVideoMeta(self, uri=None, vid=None, entry=None):
 		"""
 			Wraps the returned value of YoutubeService.GetYouTubeVideoEntry
 			into a dictioanry which can then be passed to the intialiser
@@ -59,10 +59,16 @@ class YouTubeClient(gdata.youtube.service.YouTubeService):
 				date_published	- The timestamp of the video's publication
 									time in seconds since the epoch,
 									represented as a float
+			
+			If `entry` is set to a YouTubeVideoEntry instance, it will be
+			used for generating the dictionary, instead of fetching the
+			meta via YoutubeService.GetYouTubeVideoEntry.
 		"""
 		
-		entry = self.GetYouTubeVideoEntry(uri, vid)
-		
+		# If no entry provided, fetch it ...
+		if not entry:
+			entry = self.GetYouTubeVideoEntry(uri, vid)
+			
 		meta = {}
 						
 		for category in entry.category:
@@ -83,5 +89,5 @@ class YouTubeClient(gdata.youtube.service.YouTubeService):
 		meta["date_published"] = time.mktime(
 									time.strptime(entry.published.text,
 												"%Y-%m-%dT%H:%M:%S.000Z"))
-		
+												
 		return meta
