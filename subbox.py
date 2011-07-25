@@ -28,8 +28,10 @@ from time import sleep
 
 import gdata.youtube.service
 import gdata.youtube
+# API Reference: http://gdata-python-client.googlecode.com/hg/pydocs/gdata.html
 
 from video_index import VideoIndex
+from yt_client import YouTubeClient
 
 def login(user=None, password=None):
 	
@@ -38,9 +40,8 @@ def login(user=None, password=None):
 		exit()
 	
 	print "Logging in ...",
-	client = gdata.youtube.service.YouTubeService(user, password)
 	try:
-		client.ClientLogin(user, password)
+		client = YouTubeClient.Login(user, password)
 		print "Okay!"
 		return client
 	except gdata.service.BadAuthentication:
@@ -88,12 +89,6 @@ with open(CONFIG_FILE_PATH, "r") as config_file:
 			config[key] = DEFAULT_CONFIG[key]
 
 if __name__ == '__main__':
-	
-	# Dependancies:
-	#	python26
-	# 	python-gdata
-	#	clive
-	#	mplayer
 	
 	option_parser = optparse.OptionParser(usage="python %prog (update|search|(download|play videoID, ...)) [options]")
 	option_parser.add_option("-u", "--username", action="store", type="string", dest="username", default=config["username"], help="username/email you use to log into YouTube")

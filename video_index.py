@@ -143,7 +143,7 @@ class VideoIndex(object):
 							self.videos[entry.id] = entry
 							
 			except ValueError as e:
-				print yellow("Corrupted entry for '{0}'!".format(vid))
+				print "Error: Corrupted entry for '{0}'!".format(vid)
 				
 		print "Done!"
 	
@@ -192,3 +192,4 @@ class VideoIndex(object):
 				if result_count < limit or limit is None:
 					yield result[1]
 					result_count += 1
+		
