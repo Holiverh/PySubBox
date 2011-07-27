@@ -63,12 +63,15 @@ class YouTubeClient(gdata.youtube.service.YouTubeService):
 			If `entry` is set to a YouTubeVideoEntry instance, it will be
 			used for generating the dictionary, instead of fetching the
 			meta via YoutubeService.GetYouTubeVideoEntry.
+			
+			In the event that the video isn't available to the user an
+			AttributeError will be raised.
 		"""
 		
 		# If no entry provided, fetch it ...
 		if not entry:
 			entry = self.GetYouTubeVideoEntry(uri, vid)
-			
+		
 		meta = {}
 						
 		for category in entry.category:

@@ -154,9 +154,13 @@ if __name__ == '__main__':
 					feed = client.GetYouTubeVideoFeed(uri)
 					print "Feed: {0}".format(link.href)
 					
-					for entry in feed.entry:		
-						videx.add(client.GetVideoMeta(entry=entry))
-					
+					for entry in feed.entry:
+						try:
+							videx.add(client.GetVideoMeta(entry=entry))
+						except AttributeError:
+							print "Error: Can't fetch video data for {0}".format(
+														entry.id.text.split("/")[-1])
+						
 				except gdata.service.RequestError as exce:
 					# FIXME: The failed request is caused by being too
 					# excessive with the number of requests. Find what 
@@ -284,6 +288,9 @@ if __name__ == '__main__':
 			except gdata.service.RequestError as exce:
 				print "Error: Unexpected response to request!" \
 													" {0}".format(exce)
+			except AttributeError:
+				print "Error: Can't fetch video data for {0}".format(
+											entry.id.text.split("/")[-1])
 			
 	else:
 
