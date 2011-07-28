@@ -24,6 +24,7 @@ import sys
 import os
 import optparse
 import json
+import getpass
 from time import sleep
 
 import gdata.youtube.service
@@ -118,6 +119,15 @@ if __name__ == '__main__':
 	
 	videx = VideoIndex(options.index_dir)
 	
+	# Shells which have a command history featuer may save previous commands to a
+	# plain-text file. This means, any passwords used via the -p or --password
+	# switch/flag/whatever will be exposed.
+	if options.password is None:
+		options.password = getpass.getpass("Password: ")
+	else:
+		print "Warning: Use of the -p or --password is discouraged as a potential" \
+				" security vunerability!"
+
 	if action == "update":
 		
 		client = login(options.username, options.password)
