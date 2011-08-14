@@ -23,6 +23,7 @@ import os
 import json
 import subprocess
 from time import sleep
+from shutil import rmtree
 
 class VideoIndexEntry(object):
 	
@@ -66,6 +67,13 @@ class VideoIndexEntry(object):
 		"""
 		subprocess.Popen(str(cmd).format(
 							**dict(self.__dict__, **kwargs)), shell=True)
+	
+	def delete(self):
+		"""
+			Removes the entry directory via shutil.rmtree. Anything 
+			contained within the directory will get removed.
+		"""
+		rmtree(self.directory)
 	
 	def write_meta_file(self):
 		
@@ -132,7 +140,7 @@ class VideoIndex(object):
 		return self.videos.iteritems()
 		
 	def __contains__(self, obj):
-		return self.videos.__contains__(obj)
+		return obj in self.videos
 	
 	def add(self, meta):
 		"""		

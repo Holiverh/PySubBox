@@ -25,6 +25,7 @@ import os
 import optparse
 import json
 import getpass
+import time
 from time import sleep
 
 import gdata.youtube.service
@@ -33,8 +34,15 @@ import gdata.youtube
 
 from video_index import VideoIndex
 from yt_client import YouTubeClient
+from exclusion_rule import ExclusionRule
 
 def login(user=None, password=None):
+	
+	# Shells which have a command history featuer may save previous commands to a
+	# plain-text file. This means, any passwords used via the -p or --password
+	# switch/flag/whatever will be exposed.
+	if password is None:
+		password = getpass.getpass("YouTube password: ")
 	
 	if not user or not password:
 		print "Error: Attempt to login failed due to no user or password being provided!"
@@ -70,7 +78,9 @@ DEFAULT_CONFIG = {
 				"threshold": 0.33, # 0 - 1
 				
 				"index_dir": os.path.join(os.path.expanduser("~"),
-											"Videos", "Subscriptions"),	
+											"Videos", "Subscriptions"),
+											
+				"rule": "entry.date_published < now() - days(3)",
 				}
 
 if not os.path.isfile(CONFIG_FILE_PATH):
@@ -101,6 +111,8 @@ if __name__ == '__main__':
 	option_parser.add_option("--start-index", action="store", type="int", dest="start_index", default=1, help="when updating, where should the feed index start from; greater = older videos")
 	option_parser.add_option("-r", "--resolution", action="store", type="string", dest="resolution", default=config["resolution"], help="when downloading, determines the format to be requested, based on closest matched resolution; clive presets also accepted")
 	option_parser.add_option("-c", "--cmd", action="store", type="string", dest="cmd", default=None, help="command to be used when downloading/playing media, see the README for details")
+	option_parser.add_option("--rule", action="store", type="string", dest="rule", default=config["rule"], help="a Python expression used to describe 'rules' that exclude certain enteries from the the index")
+	option_parser.add_option("-f", "--force", action="store_true", dest="force", default=False, help="when set certain confirmation requests will be skipped")
 	
 	try:
 		action = sys.argv[1].lower()
@@ -117,19 +129,15 @@ if __name__ == '__main__':
 		elif action == "update":
 			options.limit = config["feed_limit"]
 	
-	videx = VideoIndex(options.index_dir)
-	
-	# Shells which have a command history featuer may save previous commands to a
-	# plain-text file. This means, any passwords used via the -p or --password
-	# switch/flag/whatever will be exposed.
-	if options.password is None:
-		options.password = getpass.getpass("Password: ")
-	else:
+	if options.password:
 		print "Warning: Use of the -p or --password is discouraged as a potential" \
 				" security vunerability!"
+	
+	videx = VideoIndex(options.index_dir)
 
 	if action == "update":
 		
+		ex_rule = ExclusionRule(options.rule)
 		client = login(options.username, options.password)
 		
 		feed_fetch_attempts = 3
@@ -191,7 +199,16 @@ if __name__ == '__main__':
 					print "Error: Unexpected response to feed request!" \
 													" {0}".format(exce)
 				
-				
+		
+		# Now to filter out those that match exclusion rule. This could be done
+		# as each entry is beign created but it's messy with the current API.
+		# This is totally fine as long as videx.sync() isn't called, otherwise
+		# you'd get the same functionality as 'clean'; ALL enteries matching
+		# the rule would get deleted, not just the NEW enteries that match.
+		for vid, entry in videx:
+			if ex_rule.evaluate(entry):
+				entry.delete()
+		
 	elif action == "search":
 		
 		if options.search_query or options.search_query == "":
@@ -301,7 +318,30 @@ if __name__ == '__main__':
 			except AttributeError:
 				print "Error: Can't fetch video data for {0}".format(
 											entry.id.text.split("/")[-1])
-			
+	
+	elif action == "clean":
+
+		videx.sync()
+		
+		ex_rule = ExclusionRule(options.rule)
+		print "Deletion rule: {0}".format(ex_rule.expression)
+		
+		confirmed = options.force
+		while not confirmed:
+			input_ = raw_input("Delete those that match rule? (y/n) ").lower()
+			try:
+				if input_[0] == "y":
+					confirmed = True
+				elif input_[0] == "n":
+					exit()
+			except IndexError:
+				pass
+		
+		print "Deleting ..."
+		for vid, entry in videx:
+			if ex_rule.evaluate(entry):
+				entry.delete()
+		
 	else:
 
 		option_parser.print_usage()
